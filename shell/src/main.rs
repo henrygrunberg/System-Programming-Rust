@@ -1,4 +1,6 @@
 mod builtins;
+mod expand;
+mod external;
 
 use std::io::Write;
 
@@ -15,17 +17,18 @@ fn main() -> std::io::Result<()> {
             return Ok(());
         }
 
-        let mut words = line.split_whitespace();
-        let Some(command) = words.next() else {
+        let raw_words: Vec<&str> = line.split_whitespace().collect();
+        let words = expand::expand_words(&raw_words);
+
+        let Some((command, args)) = words.split_first() else {
             continue;
         };
-        let args: Vec<&str> = words.collect();
 
-        match command {
+        match command.as_str() {
             "exit" => return Ok(()),
-            "cd" => builtins::change_directory(&args),
-            "ls" => builtins::list_directory(&args),
-            _ => eprintln!("{command}: command not found"),
+            "cd" => builtins::change_directory(args),
+            "ls" => builtins::list_directory(args),
+            _ => external::run(command, args),
         }
     }
 }

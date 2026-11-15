@@ -1,4 +1,4 @@
-pub fn change_directory(args: &[&str]) {
+pub fn change_directory(args: &[String]) {
     if args.len() > 1 {
         eprintln!("cd: too many arguments");
         return;
@@ -13,7 +13,7 @@ pub fn change_directory(args: &[&str]) {
             }
         }
     } else {
-        args[0].to_string()
+        args[0].clone()
     };
 
     if let Err(e) = std::env::set_current_dir(&target_dir) {
@@ -21,21 +21,36 @@ pub fn change_directory(args: &[&str]) {
     }
 }
 
-pub fn list_directory(args: &[&str]) {
-    if args.len() > 1 {
-        eprintln!("ls: too many arguments");
+pub fn list_directory(args: &[String]) {
+    if args.is_empty() {
+        list_path(".", false);
         return;
     }
 
-    let target_dir = if args.is_empty() { "." } else { args[0] };
+    let show_headers = args.len() > 1;
+    for path in args {
+        list_path(path, show_headers);
+    }
+}
 
-    match read_entry_names(target_dir) {
-        Ok(names) => {
-            for name in names {
-                println!("{name}");
+fn list_path(path: &str, show_header: bool) {
+    match std::fs::metadata(path) {
+        Err(e) => eprintln!("ls: {path}: {e}"),
+        Ok(metadata) if !metadata.is_dir() => println!("{path}"),
+        Ok(_) => match read_entry_names(path) {
+            Ok(names) => {
+                if show_header {
+                    println!("{path}:");
+                }
+                for name in names {
+                    println!("{name}");
+                }
+                if show_header {
+                    println!();
+                }
             }
-        }
-        Err(e) => eprintln!("ls: {target_dir}: {e}"),
+            Err(e) => eprintln!("ls: {path}: {e}"),
+        },
     }
 }
 
